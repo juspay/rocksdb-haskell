@@ -27,6 +27,7 @@ module Database.RocksDB.C
     , Key
     , Val
     , c_rocksdb_open
+    , c_rocksdb_open_with_ttl
     , c_rocksdb_open_column_families
     , c_rocksdb_close
     , c_rocksdb_create_column_family
@@ -125,6 +126,9 @@ type Val              = CString
 
 foreign import ccall safe "rocksdb/c.h rocksdb_open"
   c_rocksdb_open :: Options -> DBName -> ErrPtr -> IO RocksDB
+
+foreign import ccall safe "rocksdb/c.h rocksdb_open_with_ttl"
+  c_rocksdb_open_with_ttl :: Options -> DBName -> CInt -> ErrPtr -> IO RocksDB
 
 foreign import ccall safe "rocksdb/c.h rocksdb_open_column_families"
   c_rocksdb_open_column_families :: Options

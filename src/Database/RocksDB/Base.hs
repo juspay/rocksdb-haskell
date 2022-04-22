@@ -73,8 +73,8 @@ data BatchOp = Put !ByteString !ByteString
 -- | Open a database.
 --
 -- The returned handle should be released with 'close'.
-withDB :: MonadUnliftIO m => FilePath -> Config -> (DB -> m a) -> m a
-withDB path config f =
+withDB :: MonadUnliftIO m => FilePath -> Config -> Maybe Int -> (DB -> m a) -> m a
+withDB path config maybeTtl f =
     withOptions config $ \opts_ptr ->
     withReadOpts Nothing $ \read_opts ->
     withWriteOpts $ \write_opts ->
@@ -87,7 +87,10 @@ withDB path config f =
             createDirectoryIfMissing True path
         withCString path $ \path_ptr -> do
             db_ptr <- liftIO . throwIfErr "open" $
-                c_rocksdb_open opts_ptr path_ptr
+                maybe
+                  (c_rocksdb_open opts_ptr path_ptr)
+                  (c_rocksdb_open_with_ttl opts_ptr path_ptr . toEnum)
+                  maybeTtl
             return DB { rocksDB = db_ptr
                       , columnFamilies = []
                       , readOpts = read_opts
