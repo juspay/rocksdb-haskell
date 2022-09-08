@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE LambdaCase #-}
 -- |
 -- Module      : Database.RocksDB.Base
@@ -360,3 +361,17 @@ withStrings ss f =
   where
     go acc []     = f (reverse acc)
     go acc (x:xs) = withCString x $ \p -> go (p:acc) xs
+
+createColumnFamily :: DB -> Config -> String -> IO ColumnFamily
+createColumnFamily (DB { rocksDB }) config cfName =
+  throwIfErr "create_column_family" $ \err ->
+    withOptions config $ \opts ->
+      c_rocksdb_create_column_family rocksDB opts cfName err
+
+dropColumnFamily :: DB -> ColumnFamily -> IO ()
+dropColumnFamily (DB { rocksDB }) cf =
+  throwIfErr "drop_column_family" $ \err ->
+    c_rocksdb_drop_column_family rocksDB cf err
+
+destroyColumnFamilyHandle :: ColumnFamily -> IO ()
+destroyColumnFamilyHandle = c_rocksdb_column_family_handle_destroy
