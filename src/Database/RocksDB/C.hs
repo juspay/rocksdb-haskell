@@ -86,6 +86,7 @@ module Database.RocksDB.C
     , c_rocksdb_readoptions_destroy
     , c_rocksdb_readoptions_set_snapshot
     , c_rocksdb_writeoptions_create
+    , c_rocksdb_writeoptions_disable_WAL
     , c_rocksdb_writeoptions_destroy
     , c_rocksdb_free
     ) where
@@ -444,6 +445,9 @@ foreign import ccall safe "rocksdb/c.h rocksdb_writeoptions_create"
 
 foreign import ccall safe "rocksdb/c.h rocksdb_writeoptions_destroy"
   c_rocksdb_writeoptions_destroy :: WriteOpts -> IO ()
+
+foreign import ccall safe "rocksdb/c.h rocksdb_writeoptions_disable_WAL"
+  c_rocksdb_writeoptions_disable_WAL :: WriteOpts -> CInt -> IO ()
 
 --
 -- Free

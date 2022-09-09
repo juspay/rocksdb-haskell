@@ -82,7 +82,7 @@ withDB :: MonadUnliftIO m => FilePath -> Config -> Maybe Int -> (DB -> m a) -> m
 withDB path config maybeTtl f =
     withOptions config $ \opts_ptr ->
     withReadOpts Nothing $ \read_opts ->
-    withWriteOpts $ \write_opts ->
+    withWriteOpts (disableWAL config) $ \write_opts ->
     bracket (create_db opts_ptr read_opts write_opts) destroy_db f
   where
     destroy_db db = liftIO $
@@ -112,7 +112,7 @@ withDBCF path config cf_cfgs f =
     withOptions config $ \opts_ptr ->
     withOptionsCF (map snd cf_cfgs) $ \cf_opts ->
     withReadOpts Nothing $ \read_opts ->
-    withWriteOpts $ \write_opts ->
+    withWriteOpts (disableWAL config) $ \write_opts ->
     withStrings (map fst cf_cfgs) $ \cf_names ->
     allocaArray (length cf_cfgs + 1) $ \cf_names_array ->
     allocaArray (length cf_cfgs + 1) $ \cf_opts_array ->
