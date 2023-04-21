@@ -15,6 +15,7 @@ conf = def { createIfMissing = True
            , errorIfExists   = True
            , bloomFilter     = True
            , prefixLength    = Just 3
+           , disableWAL      = True
            }
 
 withTestDB :: MonadUnliftIO m => FilePath -> (DB -> m a) -> m a

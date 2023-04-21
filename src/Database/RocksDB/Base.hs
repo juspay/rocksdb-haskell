@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE LambdaCase #-}
 -- |
 -- Module      : Database.RocksDB.Base
@@ -37,6 +38,10 @@ module Database.RocksDB.Base
     , createSnapshot
     , releaseSnapshot
 
+    , createColumnFamily
+    , dropColumnFamily
+    , destroyColumnFamilyHandle
+
     -- * Administrative Functions
     , Property (..), getProperty
     , destroy
@@ -73,11 +78,11 @@ data BatchOp = Put !ByteString !ByteString
 -- | Open a database.
 --
 -- The returned handle should be released with 'close'.
-withDB :: MonadUnliftIO m => FilePath -> Config -> (DB -> m a) -> m a
-withDB path config f =
+withDB :: MonadUnliftIO m => FilePath -> Config -> Maybe Int -> (DB -> m a) -> m a
+withDB path config maybeTtl f =
     withOptions config $ \opts_ptr ->
     withReadOpts Nothing $ \read_opts ->
-    withWriteOpts $ \write_opts ->
+    withWriteOpts (disableWAL config) $ \write_opts ->
     bracket (create_db opts_ptr read_opts write_opts) destroy_db f
   where
     destroy_db db = liftIO $
@@ -87,7 +92,10 @@ withDB path config f =
             createDirectoryIfMissing True path
         withCString path $ \path_ptr -> do
             db_ptr <- liftIO . throwIfErr "open" $
-                c_rocksdb_open opts_ptr path_ptr
+                maybe
+                  (c_rocksdb_open opts_ptr path_ptr)
+                  (c_rocksdb_open_with_ttl opts_ptr path_ptr . toEnum)
+                  maybeTtl
             return DB { rocksDB = db_ptr
                       , columnFamilies = []
                       , readOpts = read_opts
@@ -104,7 +112,7 @@ withDBCF path config cf_cfgs f =
     withOptions config $ \opts_ptr ->
     withOptionsCF (map snd cf_cfgs) $ \cf_opts ->
     withReadOpts Nothing $ \read_opts ->
-    withWriteOpts $ \write_opts ->
+    withWriteOpts (disableWAL config) $ \write_opts ->
     withStrings (map fst cf_cfgs) $ \cf_names ->
     allocaArray (length cf_cfgs + 1) $ \cf_names_array ->
     allocaArray (length cf_cfgs + 1) $ \cf_opts_array ->
@@ -357,3 +365,20 @@ withStrings ss f =
   where
     go acc []     = f (reverse acc)
     go acc (x:xs) = withCString x $ \p -> go (p:acc) xs
+
+createColumnFamily :: MonadUnliftIO m => DB -> Config -> String -> m ColumnFamily
+createColumnFamily (DB { rocksDB }) config cfNameStr =
+  liftIO $
+    withCString cfNameStr $ \cfName -> do
+      throwIfErr "create_column_family" $ \err ->
+        withOptions config $ \opts ->
+          c_rocksdb_create_column_family rocksDB opts cfName err
+
+dropColumnFamily :: MonadUnliftIO m => DB -> ColumnFamily -> m ()
+dropColumnFamily (DB { rocksDB }) cf =
+  liftIO $
+    throwIfErr "drop_column_family" $ \err ->
+      c_rocksdb_drop_column_family rocksDB cf err
+
+destroyColumnFamilyHandle :: MonadUnliftIO m => ColumnFamily -> m ()
+destroyColumnFamilyHandle = liftIO . c_rocksdb_column_family_handle_destroy
