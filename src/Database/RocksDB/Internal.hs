@@ -50,6 +50,11 @@ data Config = Config { createIfMissing :: !Bool
                      , prefixLength    :: !(Maybe Int)
                      , bloomFilter     :: !Bool
                      , disableWAL      :: !Bool
+                     , writeBufferSize :: !(Maybe Int)
+                     , maxWriteBufferNumber :: !(Maybe Int)
+                     , minWriteBufferNumberToMerge :: !(Maybe Int)
+                     , dbWriteBufferSize :: !(Maybe Int)
+                     , maxWriteBufferSizeToMaintain :: !(Maybe Int)
                      } deriving (Eq, Show)
 
 instance Default Config where
@@ -60,6 +65,11 @@ instance Default Config where
                  , prefixLength     = Nothing
                  , bloomFilter      = False
                  , disableWAL       = False
+                 , writeBufferSize  = Nothing
+                 , maxWriteBufferNumber = Nothing
+                 , minWriteBufferNumberToMerge = Nothing
+                 , dbWriteBufferSize = Nothing
+                 , maxWriteBufferSizeToMaintain = Nothing
                  }
 
 withOptions :: MonadUnliftIO m => Config -> (Options -> m a) -> m a
@@ -70,6 +80,11 @@ withOptions Config {..} f =
             block_opts opts slice
             pfx_extract opts
             max_files opts
+            buffer_size_opts opts
+            max_write_buffer_number_opts opts
+            min_write_buffer_number_to_merge_opts opts
+            db_buffer_size_opts opts
+            max_write_buffer_size_to_maintain opts
             c_rocksdb_options_set_create_if_missing
                 opts (boolToCBool createIfMissing)
             c_rocksdb_options_set_error_if_exists
@@ -102,6 +117,26 @@ withOptions Config {..} f =
         case maxFiles of
             Nothing -> return ()
             Just i -> c_rocksdb_options_set_max_open_files opts (intToCInt i)
+    buffer_size_opts opts = 
+        case writeBufferSize of
+            Nothing -> return ()
+            Just size -> c_rocksdb_options_set_max_buffer_size (intToCSize size)
+    max_write_buffer_number_opts opts = 
+        case maxWriteBufferNumber of
+            Nothing -> return ()
+            Just num -> c_rocksdb_options_set_max_write_buffer_number (intToCInt num)
+    min_write_buffer_number_to_merge_opts opts = 
+        case minWriteBufferNumberToMerge of
+            Nothing -> return ()
+            Just num -> c_rocksdb_options_set_min_write_buffer_number_to_merge (intToCInt num)
+    db_buffer_size_opts opts = 
+        case dbWriteBufferSize of
+            Nothing -> return ()
+            Just size -> c_rocksdb_options_set_db_write_buffer_size (intToCSize size)
+    max_write_buffer_size_to_maintain opts = 
+        case maxWriteBufferSizeToMaintain of
+            Nothing -> return ()
+            Just num -> c_rocksdb_options_set_max_write_buffer_size_to_maintain (intToCInt num)
 
 withOptionsCF :: MonadUnliftIO m => [Config] -> ([Options] -> m a) -> m a
 withOptionsCF cfgs f =
