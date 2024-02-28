@@ -35,6 +35,8 @@ import           Database.RocksDB.C
 import           UnliftIO
 import           UnliftIO.Foreign
 
+type DisableWAL = Bool
+
 data DB = DB { rocksDB        :: !RocksDB
              , columnFamilies :: ![ColumnFamily]
              , readOpts       :: !ReadOpts
@@ -47,6 +49,7 @@ data Config = Config { createIfMissing :: !Bool
                      , maxFiles        :: !(Maybe Int)
                      , prefixLength    :: !(Maybe Int)
                      , bloomFilter     :: !Bool
+                     , disableWAL      :: !Bool
                      } deriving (Eq, Show)
 
 instance Default Config where
@@ -56,6 +59,7 @@ instance Default Config where
                  , maxFiles         = Nothing
                  , prefixLength     = Nothing
                  , bloomFilter      = False
+                 , disableWAL       = False
                  }
 
 withOptions :: MonadUnliftIO m => Config -> (Options -> m a) -> m a
@@ -84,7 +88,6 @@ withOptions Config {..} f = with_opts $ \opts -> do
         (liftIO c_rocksdb_options_create)
         (liftIO . c_rocksdb_options_destroy)
 
-
 withOptionsCF :: MonadUnliftIO m => [Config] -> ([Options] -> m a) -> m a
 withOptionsCF cfgs f =
     go [] cfgs
@@ -103,11 +106,17 @@ withReadOpts maybe_snap_ptr =
         forM_ maybe_snap_ptr $ c_rocksdb_readoptions_set_snapshot read_opts_ptr
         return read_opts_ptr
 
-withWriteOpts :: MonadUnliftIO m => (WriteOpts -> m a) -> m a
-withWriteOpts =
+withWriteOpts :: MonadUnliftIO m => DisableWAL -> (WriteOpts -> m a) -> m a
+withWriteOpts disableWAL =
     bracket
-    (liftIO c_rocksdb_writeoptions_create)
+    createWriteOpts
     (liftIO . c_rocksdb_writeoptions_destroy)
+  where
+    createWriteOpts = liftIO $ do
+      write_opts_ptr <- c_rocksdb_writeoptions_create
+      when disableWAL $
+        c_rocksdb_writeoptions_disable_WAL  write_opts_ptr (toEnum 1)
+      return write_opts_ptr
 
 freeCString :: CString -> IO ()
 freeCString = c_rocksdb_free
