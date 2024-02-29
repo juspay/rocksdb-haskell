@@ -24,6 +24,8 @@ module Database.RocksDB.Base
     , Config (..)
 
     -- * Basic Database Manipulations
+    , destroyDB
+    , createDB
     , withDB
     , withDBCF
     , put
