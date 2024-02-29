@@ -91,7 +91,7 @@ destroyDB db opts_ptr read_opts write_opts = do
     destroyWriteOpts write_opts
 
 createDB :: MonadUnliftIO m => FilePath -> Config -> Maybe Int -> m (DB, m ())
-createDB path config maybeTtl =
+createDB path config maybeTtl = do
     opts_ptr <- createOptions config
     read_opts <- createReadOpts Nothing
     write_opts <- createWriteOpts (disableWAL config)
