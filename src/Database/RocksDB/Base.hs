@@ -85,10 +85,10 @@ data BatchOp = Put !ByteString !ByteString
 
 destroyDB :: MonadUnliftIO m => DB -> Options -> ReadOpts -> WriteOpts -> m ()
 destroyDB db opts_ptr read_opts write_opts = do
-    liftIO $ c_rocksdb_close $ rocksDB db
     destroyOptions opts_ptr
     destroyReadOpts read_opts
     destroyWriteOpts write_opts
+    liftIO $ c_rocksdb_close $ rocksDB db
 
 createDB :: MonadUnliftIO m => FilePath -> Config -> Maybe Int -> m (DB, m ())
 createDB path config maybeTtl = do
