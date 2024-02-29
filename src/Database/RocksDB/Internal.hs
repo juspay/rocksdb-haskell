@@ -16,7 +16,7 @@ module Database.RocksDB.Internal
     -- * Smart constructors & extractors
     , createOptions
     , destroyOptions
-    , createWriteOpts
+    , createReadOpts
     , destroyReadOpts
     , createWriteOpts
     , destroyWriteOpts
