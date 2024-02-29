@@ -83,15 +83,20 @@ data BatchOp = Put !ByteString !ByteString
 -- when the function exits.
 -- The returned handle should be released with 'close'.
 
-destroyDB :: MonadUnliftIO m => DB -> m ()
-destroyDB db = liftIO $ c_rocksdb_close $ rocksDB db
+destroyDB :: MonadUnliftIO m => DB -> Options -> ReadOpts -> WriteOpts -> m ()
+destroyDB db opts_ptr read_opts write_opts = do
+    liftIO $ c_rocksdb_close $ rocksDB db
+    destroyOptions opts_ptr
+    destroyReadOpts read_opts
+    destroyWriteOpts write_opts
 
-createDB :: MonadUnliftIO m => FilePath -> Config -> Maybe Int -> m DB
+createDB :: MonadUnliftIO m => FilePath -> Config -> Maybe Int -> m (DB, m ())
 createDB path config maybeTtl =
-    withOptions config $ \opts_ptr ->
-    withReadOpts Nothing $ \read_opts ->
-    withWriteOpts (disableWAL config) $ \write_opts ->
-    create_db opts_ptr read_opts write_opts
+    opts_ptr <- createOptions config
+    read_opts <- createReadOpts Nothing
+    write_opts <- createWriteOpts (disableWAL config)
+    db <- create_db opts_ptr read_opts write_opts
+    pure (db, destroyDB db opts_ptr read_opts write_opts)
   where
     create_db opts_ptr read_opts write_opts = do
         when (createIfMissing config) $
