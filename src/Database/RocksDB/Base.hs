@@ -77,6 +77,8 @@ data BatchOp = Put !ByteString !ByteString
 
 -- | Open a database.
 --
+-- The returned handle will be automatically released with 'close'
+-- when the function exits.
 -- The returned handle should be released with 'close'.
 withDB :: MonadUnliftIO m => FilePath -> Config -> Maybe Int -> (DB -> m a) -> m a
 withDB path config maybeTtl f =
@@ -154,9 +156,9 @@ withDBCF path config cf_cfgs f =
               write_opts = liftIO $ do
         when (createIfMissing config) $
             createDirectoryIfMissing True path
-        null <$> listDirectory path >>= \case
-            True -> create_new cf_names cf_opts opts_ptr read_opts write_opts
-            False -> withCString path $ \path_ptr ->
+        listDirectory path >>= \case
+            [] -> create_new cf_names cf_opts opts_ptr read_opts write_opts
+            _ -> withCString path $ \path_ptr ->
                 withCString "default" $ \cf_deflt_name -> do
                     pokeArray cf_names_array (cf_deflt_name : cf_names)
                     pokeArray cf_opts_array (opts_ptr : cf_opts)
@@ -288,13 +290,12 @@ getCommon DB{rocksDB = db_ptr, readOpts = read_opts} mcf key = liftIO $
                 Nothing -> c_rocksdb_get
                            db_ptr read_opts
                            key_ptr (intToCSize klen) vlen_ptr
-        vlen <- peek vlen_ptr
         if val_ptr == nullPtr
             then return Nothing
             else do
-                res' <- Just <$> BS.packCStringLen (val_ptr, cSizeToInt vlen)
-                freeCString val_ptr
-                return res'
+                vlen <- peek vlen_ptr
+                res <- BU.unsafePackMallocCStringLen (val_ptr, cSizeToInt vlen)
+                return $ Just res
 
 delete :: MonadIO m => DB -> ByteString -> m ()
 delete db = deleteCommon db Nothing
@@ -320,7 +321,7 @@ write DB{rocksDB = db_ptr, writeOpts = write_opts} batch = liftIO $
         throwIfErr "write" $ c_rocksdb_write db_ptr write_opts batch_ptr
         -- ensure @ByteString@s (and respective shared @CStringLen@s) aren't
         -- GC'ed until here
-        mapM_ (liftIO . touch) batch
+        mapM_ touch batch
   where
     batchAdd batch_ptr (Put key val) =
         BU.unsafeUseAsCStringLen key $ \(key_ptr, klen) ->
