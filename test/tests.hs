@@ -16,6 +16,11 @@ conf = def { createIfMissing = True
            , bloomFilter     = True
            , prefixLength    = Just 3
            , disableWAL      = True
+           , writeBufferSize  = Nothing
+           , maxWriteBufferNumber = Nothing
+           , minWriteBufferNumberToMerge = Nothing
+           , dbWriteBufferSize = Nothing
+           , maxWriteBufferSizeToMaintain = Nothing
            }
 
 withTestDB :: MonadUnliftIO m => FilePath -> (DB -> m a) -> m a

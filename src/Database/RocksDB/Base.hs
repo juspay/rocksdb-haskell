@@ -24,6 +24,8 @@ module Database.RocksDB.Base
     , Config (..)
 
     -- * Basic Database Manipulations
+    , destroyDB
+    , createDB
     , withDB
     , withDBCF
     , put
@@ -80,6 +82,37 @@ data BatchOp = Put !ByteString !ByteString
 -- The returned handle will be automatically released with 'close'
 -- when the function exits.
 -- The returned handle should be released with 'close'.
+
+destroyDB :: MonadUnliftIO m => DB -> Options -> ReadOpts -> WriteOpts -> m ()
+destroyDB db opts_ptr read_opts write_opts = do
+    destroyOptions opts_ptr
+    destroyReadOpts read_opts
+    destroyWriteOpts write_opts
+    liftIO $ c_rocksdb_close $ rocksDB db
+
+createDB :: MonadUnliftIO m => FilePath -> Config -> Maybe Int -> m (DB, m ())
+createDB path config maybeTtl = do
+    opts_ptr <- createOptions config
+    read_opts <- createReadOpts Nothing
+    write_opts <- createWriteOpts (disableWAL config)
+    db <- create_db opts_ptr read_opts write_opts
+    pure (db, destroyDB db opts_ptr read_opts write_opts)
+  where
+    create_db opts_ptr read_opts write_opts = do
+        when (createIfMissing config) $
+            createDirectoryIfMissing True path
+        withCString path $ \path_ptr -> do
+            db_ptr <- liftIO . throwIfErr "open" $
+                maybe
+                  (c_rocksdb_open opts_ptr path_ptr)
+                  (c_rocksdb_open_with_ttl opts_ptr path_ptr . toEnum)
+                  maybeTtl
+            return DB { rocksDB = db_ptr
+                      , columnFamilies = []
+                      , readOpts = read_opts
+                      , writeOpts = write_opts
+                      }
+
 withDB :: MonadUnliftIO m => FilePath -> Config -> Maybe Int -> (DB -> m a) -> m a
 withDB path config maybeTtl f =
     withOptions config $ \opts_ptr ->

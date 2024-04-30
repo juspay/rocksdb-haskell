@@ -89,6 +89,11 @@ module Database.RocksDB.C
     , c_rocksdb_writeoptions_disable_WAL
     , c_rocksdb_writeoptions_destroy
     , c_rocksdb_free
+    , c_rocksdb_options_set_max_buffer_size
+    , c_rocksdb_options_set_max_write_buffer_number
+    , c_rocksdb_options_set_min_write_buffer_number_to_merge
+    , c_rocksdb_options_set_db_write_buffer_size
+    , c_rocksdb_options_set_max_write_buffer_size_to_maintain
     ) where
 
 import           Foreign
@@ -380,6 +385,32 @@ foreign import ccall safe "rocksdb/c.h rocksdb_options_set_prefix_extractor"
   c_rocksdb_options_set_prefix_extractor :: Options
                                          -> SliceTransform
                                          -> IO ()
+
+foreign import ccall safe "rocksdb/c.h rocksdb_options_set_write_buffer_size"
+  c_rocksdb_options_set_max_buffer_size :: Options
+                                        -> CSize
+                                        -> IO ()
+
+foreign import ccall safe "rocksdb/c.h rocksdb_options_set_db_write_buffer_size"
+  c_rocksdb_options_set_db_write_buffer_size :: Options
+                                        -> CSize
+                                        -> IO ()
+
+foreign import ccall safe "rocksdb/c.h rocksdb_options_set_max_write_buffer_number"
+  c_rocksdb_options_set_max_write_buffer_number :: Options
+                                                -> CInt
+                                                -> IO ()
+
+foreign import ccall safe "rocksdb/c.h rocksdb_options_set_min_write_buffer_number_to_merge"
+  c_rocksdb_options_set_min_write_buffer_number_to_merge :: Options
+                                                          -> CInt
+                                                          -> IO ()
+
+foreign import ccall safe "rocksdb/c.h rocksdb_options_set_max_write_buffer_size_to_maintain"
+  c_rocksdb_options_set_max_write_buffer_size_to_maintain :: Options
+                                                          -> CInt
+                                                          -> IO ()
+
 
 --
 -- Block-Based Options
