@@ -31,6 +31,7 @@ module Database.RocksDB.C
     , c_rocksdb_open_column_families
     , c_rocksdb_close
     , c_rocksdb_create_column_family
+    , c_rocksdb_create_column_family_with_ttl
     , c_rocksdb_drop_column_family
     , c_rocksdb_column_family_handle_destroy
     , c_rocksdb_put
@@ -153,6 +154,14 @@ foreign import ccall safe "rocksdb/c.h rocksdb_create_column_family"
   c_rocksdb_create_column_family :: RocksDB
                                  -> Options
                                  -> CFName
+                                 -> ErrPtr
+                                 -> IO ColumnFamily
+
+foreign import ccall safe "rocksdb/c.h rocksdb_create_column_family_with_ttl"
+  c_rocksdb_create_column_family_with_ttl :: RocksDB
+                                 -> Options
+                                 -> CFName
+                                 -> CInt
                                  -> ErrPtr
                                  -> IO ColumnFamily
 

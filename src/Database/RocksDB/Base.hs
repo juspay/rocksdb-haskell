@@ -408,6 +408,14 @@ createColumnFamily (DB { rocksDB }) config cfNameStr =
         withOptions config $ \opts ->
           c_rocksdb_create_column_family rocksDB opts cfName err
 
+createColumnFamilyWithTtl :: MonadUnliftIO m => DB -> Config -> String -> Int -> m ColumnFamily
+createColumnFamilyWithTtl (DB { rocksDB }) config cfNameStr ttl =
+  liftIO $
+    withCString cfNameStr $ \cfName -> do
+      throwIfErr "create_column_family" $ \err ->
+        withOptions config $ \opts ->
+          c_rocksdb_create_column_family_with_ttl rocksDB opts cfName ttl err
+
 dropColumnFamily :: MonadUnliftIO m => DB -> ColumnFamily -> m ()
 dropColumnFamily (DB { rocksDB }) cf =
   liftIO $
