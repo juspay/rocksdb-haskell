@@ -41,6 +41,7 @@ module Database.RocksDB.Base
     , releaseSnapshot
 
     , createColumnFamily
+    , createColumnFamilyWithTtl
     , dropColumnFamily
     , destroyColumnFamilyHandle
 
