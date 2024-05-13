@@ -415,7 +415,7 @@ createColumnFamilyWithTtl (DB { rocksDB }) config cfNameStr ttl =
     withCString cfNameStr $ \cfName -> do
       throwIfErr "create_column_family" $ \err ->
         withOptions config $ \opts ->
-          c_rocksdb_create_column_family_with_ttl rocksDB opts cfName ttl err
+          c_rocksdb_create_column_family_with_ttl rocksDB opts cfName (toEnum ttl) err
 
 dropColumnFamily :: MonadUnliftIO m => DB -> ColumnFamily -> m ()
 dropColumnFamily (DB { rocksDB }) cf =
